@@ -133,39 +133,44 @@ pub async fn switch(model: &str) {
             cfg.openai_api_key = Some(k.trim().to_string());
         }
         
-        // If config already has an OpenAI model, just use that
-        if cfg.model.starts_with("gpt-") || ["o1", "o3", "o4", "dall-e"].iter().any(|prefix| cfg.model.starts_with(prefix)) {
-            println!("Using previously selected OpenAI model: {}", cfg.model);
-            save_config(&cfg);
-            println!("⚙️ config saved at {}", get_config_path().display());
-            return;
+        // Always use the previously selected OpenAI model if available in config
+        // or default to gpt-4o-realtime-preview if no OpenAI model was previously selected
+        if !cfg.model.starts_with("gpt-") && 
+           !["o1", "o3", "o4", "dall-e"].iter().any(|prefix| cfg.model.starts_with(prefix)) {
+            // No OpenAI model found, set default
+            cfg.model = "gpt-4o-realtime-preview".to_string();
         }
         
-        // Otherwise, let user choose a model
-        let opts = fetch_openai_models(cfg.openai_api_key.as_ref().unwrap()).await;
-        println!("OpenAI models:");
-        for (i,m) in opts.iter().enumerate() {
-            println!("  {}) {}", i+1, m);
-        }
-        print!("Choose [1-{}]: ", opts.len()); io::stdout().flush().unwrap();
-        let mut sel = String::new(); io::stdin().read_line(&mut sel).unwrap();
-        let idx = sel.trim().parse::<usize>().unwrap_or(1).saturating_sub(1);
-        cfg.model = opts[idx].clone();
+        println!("Switched to OpenAI model: {}", cfg.model);
+        save_config(&cfg);
+        println!("⚙️ config saved at {}", get_config_path().display());
+        return;
     } else if model == "ollama" {
         cfg.source = "ollama".into();
         let loc = fetch_ollama_local();
         if loc.is_empty() {
-            eprintln!("no local ollama models—pull one first");
+            eprintln!("❌ No local Ollama models found. Please install one first with:");
+            eprintln!(" ollama pull llama3");
+            eprintln!("\nVisit https://ollama.com/search to discover available models.");
             return;
         }
-        println!("Ollama models:");
-        for (i,m) in loc.iter().enumerate() {
-            println!("  {}) {}", i+1, m);
+        
+        // Check if the current model is an Ollama model (not starting with "gpt-" or other OpenAI prefixes)
+        if !cfg.model.starts_with("gpt-") && 
+           !["o1", "o3", "o4", "dall-e"].iter().any(|prefix| cfg.model.starts_with(prefix)) {
+            // Current model is likely an Ollama model
+            // Check if it exists in available models
+            if loc.iter().any(|m| m == &cfg.model) {
+                println!("Using previously selected Ollama model: {}", cfg.model);
+                save_config(&cfg);
+                println!("⚙️ config saved at {}", get_config_path().display());
+                return;
+            }
         }
-        print!("Choose [1-{}]: ", loc.len()); io::stdout().flush().unwrap();
-        let mut sel = String::new(); io::stdin().read_line(&mut sel).unwrap();
-        let idx = sel.trim().parse::<usize>().unwrap_or(1).saturating_sub(1);
-        cfg.model = loc[idx].clone();
+        
+        // If we don't have a valid Ollama model in config, just use the first available one
+        cfg.model = loc[0].clone();
+        println!("Switched to Ollama model: {}", cfg.model);
     } else {
         eprintln!("usage: yo switch <ollama|openai>");
         return;
@@ -268,5 +273,48 @@ pub async fn ask(question: &[String]) {
             println!("Ollama command failed with status: {}", status);
         }
     }
+}
+
+/// Show information about the current model in use
+pub fn show_current() {
+    let cfg = load_or_create_config();
+    
+    println!("📋 Current AI Configuration");
+    println!("---------------------------");
+    println!("Backend: {}", cfg.source);
+    println!("Model:   {}", cfg.model);
+    
+    if cfg.source == "ollama" {
+        let output = ShellCommand::new("ollama")
+            .args(["show", &cfg.model])
+            .output();
+            
+        if let Ok(out) = output {
+            let info = String::from_utf8_lossy(&out.stdout);
+            if !info.is_empty() {
+                let lines: Vec<&str> = info.lines().take(5).collect();
+                if !lines.is_empty() {
+                    println!("\nModel Details:");
+                    for line in lines {
+                        println!("  {}", line);
+                    }
+                }
+            }
+        }
+    } else if cfg.source == "openai" {
+        if let Some(api_key) = cfg.openai_api_key.as_deref() {
+            if api_key.len() > 7 {
+                let visible_part = &api_key[..7];
+                let masked_part = "*".repeat(api_key.len() / 4);
+                println!("\nAPI Key: {}{}", visible_part, masked_part);
+            } else {
+                println!("\nAPI Key: {}", "*".repeat(api_key.len()));
+            }
+        } else {
+            println!("\nAPI Key: [not set]");
+        }
+    }
+    
+    println!("\n💡 Use 'yo list' to see all available models");
 }
 

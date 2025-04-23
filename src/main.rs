@@ -15,6 +15,7 @@ async fn main() {
         Some(Command::Gpt { model })    => commands::set_gpt(&model).await,
         Some(Command::List)             => commands::list_models().await,
         Some(Command::Ask { question }) => commands::ask(&question).await,
+        Some(Command::Current)          => commands::show_current(),
         Some(Command::Other(o))         => commands::ask(&o).await,
         None                            => println!("yo what?"),
     }
