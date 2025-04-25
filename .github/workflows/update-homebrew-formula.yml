@@ -1,0 +1,67 @@
+name: update-homebrew-formula
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  update-formula:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get release version
+        id: get_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Download macOS tarball
+        run: |
+          curl -L -o yo-${{ steps.get_version.outputs.version }}-x86_64-apple-darwin.tar.gz \
+            https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.version }}/yo-${{ steps.get_version.outputs.version }}-x86_64-apple-darwin.tar.gz
+
+      - name: Calculate macOS sha256
+        id: macos_sha
+        run: |
+          MAC_SHA=$(shasum -a 256 yo-${{ steps.get_version.outputs.version }}-x86_64-apple-darwin.tar.gz | awk '{print $1}')
+          echo "sha256=$MAC_SHA" >> $GITHUB_OUTPUT
+
+      - name: Download Linux tarball
+        run: |
+          curl -L -o yo-${{ steps.get_version.outputs.version }}-x86_64-unknown-linux-musl.tar.gz \
+            https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.version }}/yo-${{ steps.get_version.outputs.version }}-x86_64-unknown-linux-musl.tar.gz
+
+      - name: Calculate Linux sha256
+        id: linux_sha
+        run: |
+          LINUX_SHA=$(shasum -a 256 yo-${{ steps.get_version.outputs.version }}-x86_64-unknown-linux-musl.tar.gz | awk '{print $1}')
+          echo "sha256=$LINUX_SHA" >> $GITHUB_OUTPUT
+
+      - name: Update Homebrew formula
+        run: |
+          FORMULA_PATH="Formula/yo-bin.rb"
+          VERSION=${{ steps.get_version.outputs.version }}
+          MAC_SHA=${{ steps.macos_sha.outputs.sha256 }}
+          LINUX_SHA=${{ steps.linux_sha.outputs.sha256 }}
+          sed -i "" "s/version '.*'/version '$VERSION'/" $FORMULA_PATH
+          sed -i "" "s|url \"https://github.com/.*/yo-[^/]\+-x86_64-apple-darwin.tar.gz\"|url \"https://github.com/${{ github.repository }}/releases/download/$VERSION/yo-$VERSION-x86_64-apple-darwin.tar.gz\"|" $FORMULA_PATH
+          sed -i "" "s/sha256 \"[a-f0-9]\{64\}\"/sha256 \"$MAC_SHA\"/" $FORMULA_PATH
+          sed -i "" "s|url \"https://github.com/.*/yo-[^/]\+-x86_64-unknown-linux-musl.tar.gz\"|url \"https://github.com/${{ github.repository }}/releases/download/$VERSION/yo-$VERSION-x86_64-unknown-linux-musl.tar.gz\"|" $FORMULA_PATH
+          sed -i "" "s/sha256 \"[a-f0-9]\{64\}\"/sha256 \"$LINUX_SHA\"/2" $FORMULA_PATH
+
+      - name: Commit and push updated formula
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add Formula/yo-bin.rb
+          git commit -m "chore(homebrew): update yo-bin.rb for ${{ steps.get_version.outputs.version }}"
+          git push
