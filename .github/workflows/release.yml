@@ -1,0 +1,53 @@
+name: Automated Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g. 1.0.1)'
+        required: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: actions/setup-rust@v1
+        with:
+          rust-version: stable
+
+      - name: Bump version in Cargo.toml
+        run: |
+          version=${{ github.event.inputs.version }}
+          sed -i "s/^version = \".*\"/version = \"$version\"/" Cargo.toml
+
+      - name: Update CHANGELOG.md
+        run: |
+          version=${{ github.event.inputs.version }}
+          date=$(date +'%Y-%m-%d')
+          awk -v ver="$version" -v date="$date" '
+            BEGIN { unreleased=0 }
+            /^## \[Unreleased\]/ { unreleased=1; print; next }
+            unreleased && NF==0 { print "## ["ver"] - "date"\n### Changed\n- Automated release"; unreleased=0; next }
+            { print }
+          ' CHANGELOG.md > CHANGELOG.tmp && mv CHANGELOG.tmp CHANGELOG.md
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add Cargo.toml CHANGELOG.md
+          git commit -m "chore(release): v${{ github.event.inputs.version }}"
+          git push
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.event.inputs.version }}
+          name: v${{ github.event.inputs.version }}
+          body_path: CHANGELOG.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
