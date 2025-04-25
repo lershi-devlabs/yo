@@ -1,6 +1,6 @@
 [package]
 name = "yo"
-version = "1.0.10"
+version = "1.0.11"
 edition = "2021"
 authors = ["Montek Kundan <montekkundan@gmail.com>"]
 license = "MIT"
