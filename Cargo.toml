@@ -12,5 +12,11 @@ prettytable = "0.10.0"
 reqwest = { version = "0.12.15", features = ["json", "stream"] }
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
+serial_test = "3.2.0"
 tokio = { version = "1.44.2", features = ["full"] }
 toml = "0.8.20"
+
+[dev-dependencies]
+dotenv = "0.15.0"
+mockall = "0.13.1"
+tokio = { version = "1.44.2", features = ["full", "test-util"] }
