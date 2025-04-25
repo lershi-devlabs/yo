@@ -68,17 +68,29 @@ jobs:
     - name: Install musl-tools (Linux musl only)
       if: matrix.target == 'x86_64-unknown-linux-musl'
       run: sudo apt-get update && sudo apt-get install -y musl-tools
+    - name: Set OpenSSL to vendored (macOS only)
+      if: matrix.os == 'macos-latest'
+      run: |
+        echo "OPENSSL_STATIC=1" >> $GITHUB_ENV
+        echo "OPENSSL_VENDORED=1" >> $GITHUB_ENV
     - name: Set OpenSSL to vendored (Linux musl only)
       if: matrix.target == 'x86_64-unknown-linux-musl'
       run: |
         echo "OPENSSL_STATIC=1" >> $GITHUB_ENV
         echo "OPENSSL_VENDORED=1" >> $GITHUB_ENV
-    - name: Disable OpenSSL vendored for Windows
+    - name: Install vcpkg and OpenSSL (Windows only)
       if: matrix.os == 'windows-latest'
-      run: echo "OPENSSL_NO_VENDOR=1" >> $GITHUB_ENV
+      run: |
+        git clone https://github.com/microsoft/vcpkg C:\vcpkg
+        C:\vcpkg\bootstrap-vcpkg.bat
+        C:\vcpkg\vcpkg.exe install openssl:x64-windows-static-md
+    - name: Set VCPKG_ROOT (Windows only)
+      if: matrix.os == 'windows-latest'
+      run: echo "VCPKG_ROOT=C:\\vcpkg" >> $GITHUB_ENV
     - name: Build release binary
       shell: bash
       run: |
+        set -e
         cargo build --release --target ${{ matrix.target }}
         if [ "${{ matrix.os }}" = "windows-latest" ]; then
           bin="target/${{ matrix.target }}/release/yo.exe"
