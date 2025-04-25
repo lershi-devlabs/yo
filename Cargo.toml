@@ -9,7 +9,7 @@ readme = "README.md"
 homepage = "https://github.com/montekkundan/yo"
 repository = "https://github.com/montekkundan/yo"
 keywords = ["ai", "cli", "openai", "ollama", "chatgpt"]
-categories = ["command-line-utilities", "artificial-intelligence"]
+categories = ["command-line-utilities"]
 
 [dependencies]
 clap = { version = "4.5.37", features = ["derive"] }
