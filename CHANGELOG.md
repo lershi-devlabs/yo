@@ -8,7 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 - Initial Homebrew packaging support
 - Automated release workflow
-
+## [1.0.1] - 2025-04-25
+### Changed
+- Automated release
 ## [1.0.0] - 2025-04-24
 ### Added
 - First public release
