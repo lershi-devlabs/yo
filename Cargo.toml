@@ -1,6 +1,6 @@
 [package]
 name = "yo"
-version = "1.0.8"
+version = "1.0.9"
 edition = "2021"
 authors = ["Montek Kundan <montekkundan@gmail.com>"]
 license = "MIT"
@@ -26,6 +26,9 @@ toml = "0.8.20"
 openssl = "0.10"
 
 [target.'cfg(target_env = "musl")'.dependencies]
+openssl = { version = "0.10", features = ["vendored"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
 openssl = { version = "0.10", features = ["vendored"] }
 
 [dev-dependencies]
