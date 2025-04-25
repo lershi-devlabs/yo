@@ -1,57 +1,88 @@
-name: Automated Release
+name: release
 
 on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Release version (e.g. 1.0.1)'
-        required: true
+  push:
+    tags:
+    - "[0-9]+.[0-9]+.[0-9]+"
 
 permissions:
   contents: write
 
 jobs:
-  release:
+  create-release:
+    name: create-release
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.set_version.outputs.version }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-
-      - name: Bump version in Cargo.toml
+      - uses: actions/checkout@v4
+      - name: Get the release version from the tag
+        id: set_version
         run: |
-          version=${{ github.event.inputs.version }}
-          sed -i "s/^version = \".*\"/version = \"$version\"/" Cargo.toml
-
-      - name: Update CHANGELOG.md
+          echo "::set-output name=version::${GITHUB_REF#refs/tags/}"
+          echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+      - name: Show the version
         run: |
-          version=${{ github.event.inputs.version }}
-          date=$(date +'%Y-%m-%d')
-          awk -v ver="$version" -v date="$date" '
-            BEGIN { unreleased=0 }
-            /^## \[Unreleased\]/ { unreleased=1; print; next }
-            unreleased && NF==0 { print "## ["ver"] - "date"\n### Changed\n- Automated release"; unreleased=0; next }
-            { print }
-          ' CHANGELOG.md > CHANGELOG.tmp && mv CHANGELOG.tmp CHANGELOG.md
-
-      - name: Commit changes
+          echo "version is: $VERSION"
+      - name: Check that tag version and Cargo.toml version are the same
+        shell: bash
         run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git add Cargo.toml CHANGELOG.md
-          git commit -m "chore(release): v${{ github.event.inputs.version }}"
-          git push
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ github.event.inputs.version }}
-          name: v${{ github.event.inputs.version }}
-          body_path: CHANGELOG.md
+          if ! grep -q "version = \"$VERSION\"" Cargo.toml; then
+            echo "version does not match Cargo.toml" >&2
+            exit 1
+          fi
+      - name: Create GitHub release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create $VERSION --draft --verify-tag --title $VERSION
+
+  build-release:
+    name: build-release
+    needs: ['create-release']
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - build: linux
+          os: ubuntu-latest
+          rust: stable
+          target: x86_64-unknown-linux-musl
+        - build: macos
+          os: macos-latest
+          rust: stable
+          target: x86_64-apple-darwin
+        - build: windows
+          os: windows-latest
+          rust: stable
+          target: x86_64-pc-windows-msvc
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ matrix.rust }}
+        target: ${{ matrix.target }}
+    - name: Build release binary
+      shell: bash
+      run: |
+        cargo build --release --target ${{ matrix.target }}
+        if [ "${{ matrix.os }}" = "windows-latest" ]; then
+          bin="target/${{ matrix.target }}/release/yo.exe"
+          archive="yo-${{ needs.create-release.outputs.version }}-${{ matrix.target }}.zip"
+          7z a "$archive" "$bin"
+        else
+          bin="target/${{ matrix.target }}/release/yo"
+          archive="yo-${{ needs.create-release.outputs.version }}-${{ matrix.target }}.tar.gz"
+          tar czf "$archive" -C "$(dirname $bin)" "$(basename $bin)"
+        fi
+        echo "ARCHIVE=$archive" >> $GITHUB_ENV
+    - name: Upload release archive
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      shell: bash
+      run: |
+        version="${{ needs.create-release.outputs.version }}"
+        gh release upload "$version" "$ARCHIVE"
