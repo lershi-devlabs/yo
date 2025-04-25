@@ -31,6 +31,9 @@ openssl = { version = "0.10", features = ["vendored"] }
 [target.'cfg(target_os = "macos")'.dependencies]
 openssl = { version = "0.10", features = ["vendored"] }
 
+[target.'cfg(target_os = "windows")'.dependencies]
+openssl = { version = "0.10", features = ["vendored"] }
+
 [dev-dependencies]
 dotenv = "0.15.0"
 mockall = "0.13.1"
