@@ -9,7 +9,9 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Command {
-    #[command(about = "Ask your AI a question", long_about = "Ask the currently configured AI model a question. The response will stream in real-time if using OpenAI.", visible_alias = "a")]
+    #[command(about = "Ask your AI a question", 
+        long_about = "Ask the currently configured AI model a question. The response will stream in real-time if using OpenAI.\n\nYou can use this command as either:\n  yo ask <question>\n  yo <question>\n\nBoth forms are equivalent.", 
+        visible_alias = "a")]
     Ask {
         #[arg(required = true, help = "The question or prompt to send to the AI")]
         question: Vec<String>,
