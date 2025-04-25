@@ -20,14 +20,13 @@ jobs:
           fetch-depth: 0
 
       - name: Get release version from tag
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Extract tag from workflow_run event
-          TAG=$(gh api repos/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}/jobs --jq '.jobs[0].steps[] | select(.name=="Get the release version from the tag") | .outputs.version')
-          if [ -z "$TAG" ]; then
-            # fallback: try to get from head_branch
-            TAG="${{ github.event.workflow_run.head_branch }}"
+          # Try to get the tag from the workflow_run event
+          TAG="${{ github.event.workflow_run.head_branch }}"
+          # If the tag is empty or not a version, try to get it from the release API
+          if [[ -z "$TAG" || ! "$TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            TAG=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              "https://api.github.com/repos/${{ github.repository }}/releases/latest" | jq -r .tag_name)
           fi
           echo "VERSION=$TAG" >> $GITHUB_ENV
 
@@ -59,9 +58,9 @@ jobs:
           MAC_SHA=${{ steps.macos_sha.outputs.sha256 }}
           LINUX_SHA=${{ steps.linux_sha.outputs.sha256 }}
           sed -i "s/version '.*'/version '$VERSION'/" $FORMULA_PATH
-          sed -i "s|url \"https://github.com/.*/yo-[^/]\+-x86_64-apple-darwin.tar.gz\"|url \"https://github.com/${{ github.repository }}/releases/download/$VERSION/yo-$VERSION-x86_64-apple-darwin.tar.gz\"|" $FORMULA_PATH
+          sed -i "s|url \"https://github.com/.*/yo-[^/]*-x86_64-apple-darwin.tar.gz\"|url \"https://github.com/${{ github.repository }}/releases/download/$VERSION/yo-$VERSION-x86_64-apple-darwin.tar.gz\"|" $FORMULA_PATH
           sed -i "s/sha256 \"[a-f0-9]\{64\}\"/sha256 \"$MAC_SHA\"/" $FORMULA_PATH
-          sed -i "s|url \"https://github.com/.*/yo-[^/]\+-x86_64-unknown-linux-musl.tar.gz\"|url \"https://github.com/${{ github.repository }}/releases/download/$VERSION/yo-$VERSION-x86_64-unknown-linux-musl.tar.gz\"|" $FORMULA_PATH
+          sed -i "s|url \"https://github.com/.*/yo-[^/]*-x86_64-unknown-linux-musl.tar.gz\"|url \"https://github.com/${{ github.repository }}/releases/download/$VERSION/yo-$VERSION-x86_64-unknown-linux-musl.tar.gz\"|" $FORMULA_PATH
           sed -i "s/sha256 \"[a-f0-9]\{64\}\"/sha256 \"$LINUX_SHA\"/2" $FORMULA_PATH
 
       - name: Commit and push updated formula
