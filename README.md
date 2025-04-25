@@ -17,7 +17,7 @@ Precompiled binaries for macOS, Linux, and Windows are available on the [Release
 You can install `yo` using Homebrew:
 
 ```sh
-brew tap montekkundan/yo https://github.com/montekkundan/homebrew-yo.git
+brew tap montekkundan/yo https://github.com/montekkundan/yo.git
 brew install yo
 ```
 
