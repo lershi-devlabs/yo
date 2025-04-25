@@ -20,6 +20,8 @@ jobs:
           fetch-depth: 0
 
       - name: Get release version from tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Extract tag from workflow_run event
           TAG=$(gh api repos/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}/jobs --jq '.jobs[0].steps[] | select(.name=="Get the release version from the tag") | .outputs.version')
