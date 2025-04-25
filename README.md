@@ -18,9 +18,8 @@ You can install `yo` using Homebrew:
 
 ```sh
 brew tap montekkundan/yo https://github.com/montekkundan/yo.git
-brew install yo
+brew install montekkundan/yo/yo-bin
 ```
-
 
 ### Cargo (Rust)
 If you have Rust installed, you can install with Cargo:
