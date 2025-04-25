@@ -1,9 +1,10 @@
-use crate::config::{append_history, get_config_path, load_or_create_config, save_config, Config};
+use crate::config::{append_history, get_config_path, load_or_create_config, save_config, Config, get_history_path};
 use prettytable::{Table, Row, Cell};
 use reqwest::Client;
 use serde_json::Value;
 use std::io::{self, Write};
 use std::process::Command as ShellCommand;
+use std::fs;
 
 async fn fetch_openai_models(api_key: &str) -> Vec<String> {
     let client = Client::new();
@@ -45,6 +46,20 @@ fn fetch_ollama_local() -> Vec<String> {
             .collect()
     } else {
         Vec::new()
+    }
+}
+
+/// Clear the conversation history
+pub fn clear_history() {
+    let path = get_history_path();
+    if path.exists() {
+        if let Err(e) = fs::write(&path, "") {
+            eprintln!("Failed to clear history: {}", e);
+        } else {
+            println!("✅ History cleared");
+        }
+    } else {
+        println!("No history file found to clear.");
     }
 }
 
@@ -205,10 +220,17 @@ pub async fn ask(question: &[String]) {
     let prompt = question.join(" ");
 
     if cfg.source == "openai" {
+        let mut messages = Vec::new();
+        messages.push(serde_json::json!({
+            "role": "system",
+            "content": "You are a helpful AI assistant."
+        }));
+        messages.push(serde_json::json!({"role": "user", "content": prompt.clone()}));
+
         let client = Client::new();
         let body = serde_json::json!({
             "model": cfg.model,
-            "messages": [{ "role":"user","content": prompt }],
+            "messages": messages,
             "stream": true
         });
         

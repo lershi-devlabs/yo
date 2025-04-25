@@ -17,6 +17,7 @@ async fn main() {
         Some(Command::Ask { question }) => commands::ask(&question).await,
         Some(Command::Current)          => commands::show_current(),
         Some(Command::Other(o))         => commands::ask(&o).await,
+        Some(Command::ClearHistory)     => commands::clear_history(),
         None                            => println!("yo what?"),
     }
 }

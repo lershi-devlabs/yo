@@ -43,6 +43,9 @@ pub enum Command {
     #[command(about = "Show current AI model in use", long_about = "Display information about the currently selected AI backend and model.")]
     Current,
     
+    #[command(about = "Clear the conversation history", long_about = "Clear the conversation history stored in history.txt.")]
+    ClearHistory,
+    
     #[command(external_subcommand)]
     Other(Vec<String>),
 }
