@@ -5,24 +5,13 @@ use std::io::Write;
 use std::path::PathBuf;
 
 /// Resolve $XDG_CONFIG_HOME or fallback to ~/.config
-fn config_base_dir() -> PathBuf {
+fn base_dir() -> PathBuf {
     if let Ok(xdg) = std::env::var("XDG_CONFIG_HOME") {
         PathBuf::from(xdg)
     } else if let Some(home) = dirs::home_dir() {
         home.join(".config")
     } else {
         panic!("could not determine config directory");
-    }
-}
-
-/// Resolve $XDG_DATA_HOME or fallback to ~/.local/share
-fn data_base_dir() -> PathBuf {
-    if let Ok(xdg) = std::env::var("XDG_DATA_HOME") {
-        PathBuf::from(xdg)
-    } else if let Some(home) = dirs::home_dir() {
-        home.join(".local").join("share")
-    } else {
-        panic!("could not determine data directory");
     }
 }
 
@@ -36,7 +25,7 @@ pub struct Config {
 }
 
 pub fn get_config_path() -> PathBuf {
-    let dir = config_base_dir().join("yo");
+    let dir = base_dir().join("yo");
     fs::create_dir_all(&dir).unwrap();
     dir.join("config.toml")
 }
@@ -58,13 +47,14 @@ pub fn save_config(cfg: &Config) {
 }
 
 pub fn get_history_path() -> PathBuf {
-    let dir = data_base_dir().join("yo");
+    let dir = base_dir().join("yo");
     fs::create_dir_all(&dir).unwrap();
     dir.join("history.txt")
 }
 
 pub fn append_history(entry: &str) {
     let path = get_history_path();
+    
     let mut f = OpenOptions::new().create(true).append(true).open(&path).unwrap();
     writeln!(f, "{}", entry).unwrap();
 }

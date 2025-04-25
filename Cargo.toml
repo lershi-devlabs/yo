@@ -1,7 +1,15 @@
 [package]
 name = "yo"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
+authors = ["Montek Kundan <montekkundan@gmail.com>"]
+license = "MIT"
+description = "Ask your terminal anything using AI (OpenAI or Ollama)."
+readme = "README.md"
+homepage = "https://github.com/montekkundan/yo"
+repository = "https://github.com/montekkundan/yo"
+keywords = ["ai", "cli", "openai", "ollama", "chatgpt"]
+categories = ["command-line-utilities", "artificial-intelligence"]
 
 [dependencies]
 clap = { version = "4.5.37", features = ["derive"] }
