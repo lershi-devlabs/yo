@@ -7,6 +7,7 @@ use std::process::Command as ShellCommand;
 use std::fs;
 use async_trait::async_trait;
 use anyhow::Result;
+use futures_util::StreamExt;
 
 #[async_trait]
 pub trait AIProvider {
@@ -31,7 +32,7 @@ impl AIProvider for OpenAIProvider {
         let body = serde_json::json!({
             "model": self.model,
             "messages": messages,
-            "stream": false
+            "stream": true
         });
         let res = client
             .post("https://api.openai.com/v1/chat/completions")
@@ -39,9 +40,40 @@ impl AIProvider for OpenAIProvider {
             .json(&body)
             .send()
             .await?;
-        let json: serde_json::Value = res.json().await?;
-        let content = json["choices"][0]["message"]["content"].as_str().unwrap_or("").to_string();
-        Ok(content)
+        let status = res.status();
+        let mut full = String::new();
+        if !status.is_success() {
+            let err_text = res.text().await.unwrap_or_default();
+            eprintln!("OpenAI API error: {}\n{}", status, err_text);
+            return Ok(String::new());
+        }
+        let mut stream = res.bytes_stream();
+        use std::io::Write;
+        let mut got_content = false;
+        while let Some(chunk) = stream.next().await {
+            let chunk = chunk?;
+            for line in chunk.split(|&b| b == b'\n') {
+                if line.starts_with(b"data: ") {
+                    let json = &line[6..];
+                    if json == b"[DONE]" { continue; }
+                    if let Ok(val) = serde_json::from_slice::<serde_json::Value>(json) {
+                        if let Some(content) = val["choices"][0]["delta"]["content"].as_str() {
+                            print!("{}", content);
+                            std::io::stdout().flush().ok();
+                            full.push_str(content);
+                            got_content = true;
+                        }
+                    }
+                } else if !line.is_empty() {
+                    eprintln!("OpenAI stream: {}", String::from_utf8_lossy(line));
+                }
+            }
+        }
+        if !got_content {
+            eprintln!("No response from OpenAI. Check your API key, model, or network.");
+        }
+        println!();
+        Ok(full)
     }
 }
 
@@ -52,13 +84,14 @@ pub struct OllamaProvider {
 #[async_trait]
 impl AIProvider for OllamaProvider {
     async fn ask(&self, prompt: &str) -> Result<String> {
-        let output = std::process::Command::new("ollama")
+        use std::process::Command;
+        // Directly spawn the ollama process and let it inherit the terminal
+        let status = Command::new("ollama")
             .arg("run")
             .arg(&self.model)
             .arg(prompt)
-            .output()?;
-        let content = String::from_utf8_lossy(&output.stdout).to_string();
-        Ok(content)
+            .status()?;
+        Ok(format!("Ollama exited with status: {}", status))
     }
 }
 
@@ -220,11 +253,11 @@ pub async fn switch(model: &str) {
         }
         
         // Always use the previously selected OpenAI model if available in config
-        // or default to gpt-4o-realtime-preview if no OpenAI model was previously selected
+        // or default to gpt-4o if no OpenAI model was previously selected
         if !cfg.model.starts_with("gpt-") && 
            !["o1", "o3", "o4", "dall-e"].iter().any(|prefix| cfg.model.starts_with(prefix)) {
             // No OpenAI model found, set default
-            cfg.model = "gpt-4o-realtime-preview".to_string();
+            cfg.model = "gpt-4o".to_string();
         }
         
         println!("Switched to OpenAI model: {}", cfg.model);

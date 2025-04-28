@@ -1,6 +1,6 @@
 [package]
 name = "yo"
-version = "1.1.0"
+version = "1.1.1"
 edition = "2021"
 authors = ["Montek Kundan <montekkundan@gmail.com>"]
 license = "MIT"
@@ -10,6 +10,37 @@ homepage = "https://github.com/montekkundan/yo"
 repository = "https://github.com/montekkundan/yo"
 keywords = ["ai", "cli", "openai", "ollama", "chatgpt"]
 categories = ["command-line-utilities"]
+exclude = [
+    "target/*",
+    "www/*",
+    "tests/*",
+    "*.lock",
+    "*.yml",
+    "*.rb",
+    "*.glb",
+    "*.svg",
+    "*.html",
+    "*.css",
+    "*.json",
+    "*.png",
+    "*.jpg",
+    "*.jpeg",
+    "*.gif",
+    "*.mp4",
+    "*.mov",
+    "*.avi",
+    "*.zip",
+    "*.tar",
+    "*.gz",
+    "*.7z",
+    "*.exe",
+    "*.dll",
+    "*.so",
+    "*.dylib",
+    "*.bin",
+    "*.crate",
+    "Formula/*"
+]
 
 [dependencies]
 clap = { version = "4.5.37", features = ["derive"] }
