@@ -1,14 +1,14 @@
 class YoBin < Formula
-  version '1.1.0'
+  version '1.1.1'
   desc "Ask your terminal anything using AI."
   homepage "https://github.com/montekkundan/yo"
 
   if OS.mac?
-    url "https://github.com/Montekkundan/yo/releases/download/1.1.0/yo-1.1.0-x86_64-apple-darwin.tar.gz"
-    sha256 "4b1a9b99f83b6d8b98cd0aad1d788ad99f50df565dc6899ff4fce62ea07258d8"
+    url "https://github.com/Montekkundan/yo/releases/download/1.1.1/yo-1.1.1-x86_64-apple-darwin.tar.gz"
+    sha256 "9551d1f7dea119861d6f931918014afa66b6fcddacad032c871bddcadc282059"
   elsif OS.linux?
-    url "https://github.com/Montekkundan/yo/releases/download/1.1.0/yo-1.1.0-x86_64-unknown-linux-musl.tar.gz"
-    sha256 "4b1a9b99f83b6d8b98cd0aad1d788ad99f50df565dc6899ff4fce62ea07258d8"
+    url "https://github.com/Montekkundan/yo/releases/download/1.1.1/yo-1.1.1-x86_64-unknown-linux-musl.tar.gz"
+    sha256 "9551d1f7dea119861d6f931918014afa66b6fcddacad032c871bddcadc282059"
   end
 
   def install
