@@ -63,6 +63,20 @@ yo Summarize the Rust ownership model.
 
 The tool supports configuration for different AI backends (OpenAI, Ollama). See the documentation or run `yo help` for more details.
 
+## How to Push Changes to GitHub
+
+To push your changes to GitHub, use the following steps:
+
+```sh
+git add .
+git commit -m "changes here"
+git tag v1.0.0   # necessary when new version is released
+# replace v1.0.0 with the version you are releasing
+git push
+# To push tags as well:
+git push --tags
+```
+
 ## Changelog
 
 See [CHANGELOG.md](./CHANGELOG.md) for a list of changes and version history.

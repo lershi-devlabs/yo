@@ -5,6 +5,77 @@ use serde_json::Value;
 use std::io::{self, Write};
 use std::process::Command as ShellCommand;
 use std::fs;
+use async_trait::async_trait;
+use anyhow::Result;
+
+#[async_trait]
+pub trait AIProvider {
+    async fn ask(&self, prompt: &str) -> Result<String>;
+}
+
+pub struct OpenAIProvider {
+    pub model: String,
+    pub api_key: String,
+}
+
+#[async_trait]
+impl AIProvider for OpenAIProvider {
+    async fn ask(&self, prompt: &str) -> Result<String> {
+        let mut messages = Vec::new();
+        messages.push(serde_json::json!({
+            "role": "system",
+            "content": "You are a helpful AI assistant."
+        }));
+        messages.push(serde_json::json!({"role": "user", "content": prompt.to_string()}));
+        let client = reqwest::Client::new();
+        let body = serde_json::json!({
+            "model": self.model,
+            "messages": messages,
+            "stream": false
+        });
+        let res = client
+            .post("https://api.openai.com/v1/chat/completions")
+            .bearer_auth(&self.api_key)
+            .json(&body)
+            .send()
+            .await?;
+        let json: serde_json::Value = res.json().await?;
+        let content = json["choices"][0]["message"]["content"].as_str().unwrap_or("").to_string();
+        Ok(content)
+    }
+}
+
+pub struct OllamaProvider {
+    pub model: String,
+}
+
+#[async_trait]
+impl AIProvider for OllamaProvider {
+    async fn ask(&self, prompt: &str) -> Result<String> {
+        let output = std::process::Command::new("ollama")
+            .arg("run")
+            .arg(&self.model)
+            .arg(prompt)
+            .output()?;
+        let content = String::from_utf8_lossy(&output.stdout).to_string();
+        Ok(content)
+    }
+}
+
+pub enum Provider {
+    OpenAI(OpenAIProvider),
+    Ollama(OllamaProvider),
+}
+
+#[async_trait]
+impl AIProvider for Provider {
+    async fn ask(&self, prompt: &str) -> Result<String> {
+        match self {
+            Provider::OpenAI(p) => p.ask(prompt).await,
+            Provider::Ollama(p) => p.ask(prompt).await,
+        }
+    }
+}
 
 async fn fetch_openai_models(api_key: &str) -> Vec<String> {
     let client = Client::new();
@@ -219,80 +290,24 @@ pub async fn ask(question: &[String]) {
     let cfg = load_or_create_config();
     let prompt = question.join(" ");
 
-    if cfg.source == "openai" {
-        let mut messages = Vec::new();
-        messages.push(serde_json::json!({
-            "role": "system",
-            "content": "You are a helpful AI assistant."
-        }));
-        messages.push(serde_json::json!({"role": "user", "content": prompt.clone()}));
-
-        let client = Client::new();
-        let body = serde_json::json!({
-            "model": cfg.model,
-            "messages": messages,
-            "stream": true
-        });
-        
-        let mut res = client
-            .post("https://api.openai.com/v1/chat/completions")
-            .bearer_auth(cfg.openai_api_key.as_ref().unwrap())
-            .json(&body)
-            .send()
-            .await
-            .expect("OpenAI request failed");
-            
-        let mut full_response = String::new();
-        
-        let mut buffer = Vec::new();
-        
-        while let Ok(Some(chunk)) = res.chunk().await {
-            let chunk_str = String::from_utf8_lossy(&chunk);
-            buffer.extend_from_slice(chunk_str.as_bytes());
-            
-            let buffer_str = String::from_utf8_lossy(&buffer);
-            let mut processed_up_to = 0;
-            
-            for (_i, line) in buffer_str.split('\n').enumerate() {
-                if line.starts_with("data: ") {
-                    let data = &line[6..]; // Skip "data: "
-                    
-                    if data.trim() == "[DONE]" {
-                        continue;
-                    }
-                    
-                    if let Ok(json) = serde_json::from_str::<Value>(data) {
-                        if let Some(content) = json["choices"][0]["delta"]["content"].as_str() {
-                            print!("{}", content);
-                            io::stdout().flush().unwrap();
-                            full_response.push_str(content);
-                        }
-                    }
-                    
-                    processed_up_to = buffer_str[..buffer_str.find(line).unwrap_or(0) + line.len() + 1].len();
-                }
-            }
-            
-            if processed_up_to > 0 {
-                buffer = buffer.split_off(processed_up_to);
-            }
-        }
-        
-        println!(); 
-        append_history(&format!("Q: {}\nA: {}", prompt, full_response));
+    let provider = if cfg.source == "openai" {
+        Provider::OpenAI(OpenAIProvider {
+            model: cfg.model.clone(),
+            api_key: cfg.openai_api_key.clone().unwrap(),
+        })
     } else {
-        let mut child = ShellCommand::new("ollama")
-            .arg("run")
-            .arg(&cfg.model)
-            .arg(&prompt)
-            .spawn()
-            .expect("Failed to start ollama run");
-        
+        Provider::Ollama(OllamaProvider {
+            model: cfg.model.clone(),
+        })
+    };
 
-        let status = child.wait().expect("Failed to wait for ollama");
-        
-        if !status.success() {
-            println!("Ollama command failed with status: {}", status);
+    match provider.ask(&prompt).await {
+        Ok(response) => {
+            println!("{}", response);
+            append_history(&format!("Q: {}\nA: {}", prompt, response));
+        }
+        Err(e) => {
+            eprintln!("Error during AI call: {}", e);
         }
     }
 }
