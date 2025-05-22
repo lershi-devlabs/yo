@@ -34,10 +34,13 @@ jobs:
           sed -i "s|sha256sums=('.*')|sha256sums=('$SHA')|" PKGBUILD
 
       - name: Commit and push PKGBUILD
+        env:
+          AUR_PUSH_TOKEN: ${{ secrets.AUR_PUSH_TOKEN }}
         run: |
           cd aur
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git add PKGBUILD
           git commit -m "Update PKGBUILD for $VERSION"
-          git push 
+          git remote set-url origin https://$AUR_PUSH_TOKEN@github.com/lershi-devlabs/yo-bin-aur.git
+          git push origin main 
