@@ -68,13 +68,12 @@ The tool supports configuration for different AI backends (OpenAI, Ollama). See 
 To push your changes to GitHub, use the following steps:
 
 ```sh
+git pull
 git add .
-git commit -m "changes here"
+git commit -m "chore: bump version to x.y.z"
 git tag v1.0.0   # necessary when new version is released
 # replace v1.0.0 with the version you are releasing
-git push
-# To push tags as well:
-git push --tags
+git push origin master --tags
 ```
 
 ## Changelog
