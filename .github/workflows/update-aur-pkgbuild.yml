@@ -11,7 +11,7 @@ jobs:
       - name: Checkout AUR repo
         uses: actions/checkout@v4
         with:
-          repository: montekkundan/yo-bin-aur
+          repository: lershi-devlabs/yo-bin-aur
           token: ${{ secrets.GITHUB_TOKEN }}
           path: aur
 
@@ -21,7 +21,18 @@ jobs:
           cd aur
           sed -i "s/pkgver=.*/pkgver=$VERSION/" PKGBUILD
           sed -i "s|source=(\"https://github.com/.*/yo-.*-x86_64-unknown-linux-musl.tar.gz\")|source=(\"https://github.com/lershi-devlabs/yo/releases/download/$VERSION/yo-$VERSION-x86_64-unknown-linux-musl.tar.gz\")|" PKGBUILD
-          # Optionally update sha256sums here
+
+      - name: Update sha256sums in PKGBUILD
+        run: |
+          VERSION=${{ github.event.release.tag_name }}
+          cd aur
+          curl -LO "https://github.com/lershi-devlabs/yo/releases/download/$VERSION/yo-$VERSION-x86_64-unknown-linux-musl.tar.gz"
+          SHA=$(sha256sum yo-$VERSION-x86_64-unknown-linux-musl.tar.gz | awk '{print $1}')
+          sed -i "s|sha256sums=('.*')|sha256sums=('$SHA')|" PKGBUILD
+
+      - name: Commit and push PKGBUILD
+        run: |
+          cd aur
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git add PKGBUILD
