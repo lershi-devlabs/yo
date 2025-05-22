@@ -1,14 +1,17 @@
 name: cargo-publish
 
 on:
-  release:
-    types: [published]
+  workflow_run:
+    workflows: ["release"]
+    types:
+      - completed
 
 permissions:
   contents: write
 
 jobs:
   publish:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
