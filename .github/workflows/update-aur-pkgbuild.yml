@@ -1,0 +1,29 @@
+name: update-aur-pkgbuild
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  update-aur:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout AUR repo
+        uses: actions/checkout@v4
+        with:
+          repository: montekkundan/yo-bin-aur
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: aur
+
+      - name: Update PKGBUILD
+        run: |
+          VERSION=${{ github.event.release.tag_name }}
+          cd aur
+          sed -i "s/pkgver=.*/pkgver=$VERSION/" PKGBUILD
+          sed -i "s|source=(\"https://github.com/.*/yo-.*-x86_64-unknown-linux-musl.tar.gz\")|source=(\"https://github.com/lershi-devlabs/yo/releases/download/$VERSION/yo-$VERSION-x86_64-unknown-linux-musl.tar.gz\")|" PKGBUILD
+          # Optionally update sha256sums here
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add PKGBUILD
+          git commit -m "Update PKGBUILD for $VERSION"
+          git push 
