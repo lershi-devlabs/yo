@@ -1,17 +1,14 @@
 name: cargo-publish
 
 on:
-  workflow_run:
-    workflows: ["release", "update-homebrew-formula"]
-    types:
-      - completed
+  release:
+    types: [published]
 
 permissions:
   contents: write
 
 jobs:
   publish:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository

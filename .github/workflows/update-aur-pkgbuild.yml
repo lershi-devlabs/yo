@@ -3,6 +3,9 @@ name: update-aur-pkgbuild
 on:
   release:
     types: [published]
+  push:
+    tags:
+      - '*'
 
 jobs:
   update-aur:
@@ -17,14 +20,14 @@ jobs:
 
       - name: Update PKGBUILD
         run: |
-          VERSION=${{ github.event.release.tag_name }}
+          VERSION=${{ github.event.release.tag_name || github.ref_name }}
           cd aur
           sed -i "s/pkgver=.*/pkgver=$VERSION/" PKGBUILD
           sed -i "s|source=(\"https://github.com/.*/yo-.*-x86_64-unknown-linux-musl.tar.gz\")|source=(\"https://github.com/lershi-devlabs/yo/releases/download/$VERSION/yo-$VERSION-x86_64-unknown-linux-musl.tar.gz\")|" PKGBUILD
 
       - name: Update sha256sums in PKGBUILD
         run: |
-          VERSION=${{ github.event.release.tag_name }}
+          VERSION=${{ github.event.release.tag_name || github.ref_name }}
           cd aur
           curl -LO "https://github.com/lershi-devlabs/yo/releases/download/$VERSION/yo-$VERSION-x86_64-unknown-linux-musl.tar.gz"
           SHA=$(sha256sum yo-$VERSION-x86_64-unknown-linux-musl.tar.gz | awk '{print $1}')
