@@ -5,10 +5,10 @@ class YoBin < Formula
 
   if OS.mac?
     url "https://github.com/lershi-devlabs/yo/releases/download/1.2.0/yo-1.2.0-x86_64-apple-darwin.tar.gz"
-    sha256 "030306cbd39195311d3bb196c8218e5e028f79304355967eec2d7a5cc4efe8f0"
+    sha256 "a38968482cd81019ff12d479e480e353b54a017a6b74af649486da7ebb42f199"
   elsif OS.linux?
     url "https://github.com/lershi-devlabs/yo/releases/download/1.2.0/yo-1.2.0-x86_64-unknown-linux-musl.tar.gz"
-    sha256 "030306cbd39195311d3bb196c8218e5e028f79304355967eec2d7a5cc4efe8f0"
+    sha256 "a38968482cd81019ff12d479e480e353b54a017a6b74af649486da7ebb42f199"
   end
 
   def install
