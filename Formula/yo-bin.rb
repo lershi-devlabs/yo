@@ -1,5 +1,5 @@
 class YoBin < Formula
-  version '1.1.1'
+  version '1.2.0'
   desc "Ask your terminal anything using AI."
   homepage "https://github.com/montekkundan/yo"
 
