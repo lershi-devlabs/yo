@@ -17,8 +17,8 @@ Precompiled binaries for macOS, Linux, and Windows are available on the [Release
 You can install `yo` using Homebrew:
 
 ```sh
-brew tap montekkundan/yo https://github.com/montekkundan/yo.git
-brew install montekkundan/yo/yo-bin
+brew tap lershi-devlabs/yo https://github.com/lershi-devlabs/yo.git
+brew install lershi-devlabs/yo/yo-bin
 ```
 
 ### Cargo (Rust)
@@ -32,7 +32,7 @@ cargo install yo
 Clone the repository and build with Cargo:
 
 ```sh
-git clone https://github.com/montekkundan/yo.git
+git clone https://github.com/lershi-devlabs/yo.git
 cd yo
 cargo install --path .
 ```

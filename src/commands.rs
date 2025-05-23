@@ -64,7 +64,7 @@ impl AIProvider for OpenAIProvider {
                         }
                     }
                 } else if !line.is_empty() {
-                    eprintln!("OpenAI stream: {}", String::from_utf8_lossy(line));
+                    // Silently ignore non-content lines (do not print raw OpenAI stream lines)
                 }
             }
         }
